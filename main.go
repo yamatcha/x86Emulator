@@ -108,9 +108,13 @@ func getSignCode8(emu *emulator, index int) int8 {
 func getCode32(emu *emulator, index int) uint32 {
 	var ret uint32 = 0
 	for i := 0; i < 4; i++ {
-		ret |= uint32(getCode8(emu, index+i) << (i * 8))
+		ret |= uint32(getCode8(emu, index+i)) << (i * 8)
 	}
 	return ret
+}
+
+func getSignCode32(emu *emulator, index int) int32 {
+	return int32(getCode32(emu, index))
 }
 
 func movR32Imm32(emu *emulator) {
@@ -118,6 +122,11 @@ func movR32Imm32(emu *emulator) {
 	var value uint32 = getCode32(emu, 1)
 	emu.registers.setRegisterValue(reg, value)
 	emu.eip += 5
+}
+
+func near_jump(emu *emulator) {
+	diff := getSignCode32(emu, 1)
+	emu.eip += uint32(diff + 5)
 }
 
 func shortJump(emu *emulator) {
@@ -129,6 +138,8 @@ func instructions(index byte) (func(emu *emulator), error) {
 	switch {
 	case 0xb7 < index && index < 0xb8+8:
 		return movR32Imm32, nil
+	case 0xe9 == index:
+		return near_jump, nil
 	case 0xeb == index:
 		return shortJump, nil
 	}
@@ -141,7 +152,7 @@ func main() {
 		os.Exit(1)
 	}
 	filename := os.Args[1]
-	emu := newEmulator(memorySize, 0x0000, 0x7c00)
+	emu := newEmulator(memorySize, 0x7c00, 0x7c00)
 	if emu == nil {
 		fmt.Println("Error: Value of eip or esp is invalid")
 		os.Exit(1)
@@ -151,7 +162,8 @@ func main() {
 		panic(err)
 	}
 	defer binary.Close()
-	emu.memory, err = ioutil.ReadAll(binary)
+	mem, err := ioutil.ReadAll(binary)
+	emu.memory = append(emu.memory[:0x7c00], mem...)
 	for emu.eip < memorySize {
 		var code byte = getCode8(emu, 0)
 		fmt.Printf("EIP = %X, Code = %02X\n", emu.eip, code)
