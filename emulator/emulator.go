@@ -5,6 +5,8 @@ type RegisterID int
 const (
 	RegistersCount = 8
 	MemorySize     = 1024 * 1024
+	ESP            = 4
+	EBP            = 5
 )
 
 type Registers struct {
@@ -82,6 +84,26 @@ func (reg *Registers) GetRegister32(index byte) uint32 {
 	return 0
 }
 
+func GetCode8(emu *Emulator, index int) byte {
+	return emu.Memory[int(emu.Eip)+index]
+}
+
+func getSignCode8(emu *Emulator, index int) int8 {
+	return int8(emu.Memory[int(emu.Eip)+index])
+}
+
+func getCode32(emu *Emulator, index int) uint32 {
+	var ret uint32 = 0
+	for i := 0; i < 4; i++ {
+		ret |= uint32(GetCode8(emu, index+i)) << (i * 8)
+	}
+	return ret
+}
+
+func getSignCode32(emu *Emulator, index int) int32 {
+	return int32(getCode32(emu, index))
+}
+
 func setMomory8(emu *Emulator, address uint32, value uint32) {
 	emu.Memory[address] = byte(value & 0xff)
 }
@@ -104,22 +126,15 @@ func getMemory32(emu *Emulator, address uint32) uint32 {
 	return ret
 }
 
-func GetCode8(emu *Emulator, index int) byte {
-	return emu.Memory[int(emu.Eip)+index]
+func push32(emu *Emulator, value uint32) {
+	address := emu.Registers.GetRegister32(ESP) - 4
+	emu.Registers.setRegister32(ESP, address)
+	setMemory32(emu, address, value)
 }
 
-func getSignCode8(emu *Emulator, index int) int8 {
-	return int8(emu.Memory[int(emu.Eip)+index])
-}
-
-func getCode32(emu *Emulator, index int) uint32 {
-	var ret uint32 = 0
-	for i := 0; i < 4; i++ {
-		ret |= uint32(GetCode8(emu, index+i)) << (i * 8)
-	}
+func pop32(emu *Emulator) uint32 {
+	address := emu.Registers.GetRegister32(ESP)
+	ret := getMemory32(emu, address)
+	emu.Registers.setRegister32(ESP, address+4)
 	return ret
-}
-
-func getSignCode32(emu *Emulator, index int) int32 {
-	return int32(getCode32(emu, index))
 }
