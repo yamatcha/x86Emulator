@@ -57,7 +57,9 @@ func subRm32Imm8(emu *Emulator, modrm *ModRM) {
 	rm32 := getRm32(emu, modrm)
 	imm8 := uint32(getSignCode8(emu, 0))
 	emu.Eip++
+	result := uint64(rm32) - uint64(imm8)
 	setRm32(emu, modrm, rm32-imm8)
+	updateEflagsSub(emu, rm32, imm8, result)
 }
 
 func cmpR32Rm32(emu *Emulator) {
@@ -66,14 +68,14 @@ func cmpR32Rm32(emu *Emulator) {
 	parseModrm(emu, &modrm)
 	r32 := getR32(emu, &modrm)
 	rm32 := getRm32(emu, &modrm)
-	result := uint64(r32) + uint64(rm32)
+	result := uint64(r32) - uint64(rm32)
 	updateEflagsSub(emu, r32, rm32, result)
 }
 
 func cmpRm32Imm8(emu *Emulator, modrm *ModRM) {
 	rm32 := getRm32(emu, modrm)
 	imm8 := int32(getSignCode8(emu, 0))
-	result := uint64(rm32) + uint64(imm8)
+	result := uint64(rm32) - uint64(imm8)
 	updateEflagsSub(emu, rm32, uint32(imm8), result)
 }
 
