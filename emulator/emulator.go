@@ -3,10 +3,14 @@ package emulator
 type RegisterID int
 
 const (
-	RegistersCount = 8
-	MemorySize     = 1024 * 1024
-	ESP            = 4
-	EBP            = 5
+	RegistersCount        = 8
+	MemorySize            = 1024 * 1024
+	ESP                   = 4
+	EBP                   = 5
+	CARRYFLAG      uint32 = 1
+	ZEROFLAG       uint32 = 1 << 6
+	SIGNFLAG       uint32 = 1 << 7
+	OVERFLOWFLAG   uint32 = 1 << 11
 )
 
 type Registers struct {
@@ -137,4 +141,60 @@ func pop32(emu *Emulator) uint32 {
 	ret := getMemory32(emu, address)
 	emu.Registers.setRegister32(ESP, address+4)
 	return ret
+}
+
+func updateEflagsSub(emu *Emulator, v1, v2 uint32, result uint64) {
+	sign1 := int(v1 >> 31)
+	sign2 := int(v2 >> 31)
+	signr := int((result >> 31) & 1)
+	setCarry(emu, result>>32 != 0)
+	setZero(emu, result == 0)
+	setSign(emu, signr != 0)
+	setOverflow(emu, sign1 != sign2 && sign1 != signr)
+}
+
+func setCarry(emu *Emulator, isCarry bool) {
+	if isCarry {
+		emu.eflags |= CARRYFLAG
+	} else {
+		emu.eflags &= ^CARRYFLAG
+	}
+}
+
+func setZero(emu *Emulator, isZero bool) {
+	if isZero {
+		emu.eflags |= ZEROFLAG
+	} else {
+		emu.eflags &= ^ZEROFLAG
+	}
+}
+
+func setSign(emu *Emulator, isSign bool) {
+	if isSign {
+		emu.eflags |= SIGNFLAG
+	} else {
+		emu.eflags &= ^SIGNFLAG
+	}
+}
+
+func setOverflow(emu *Emulator, isOverflow bool) {
+	if isOverflow {
+		emu.eflags |= OVERFLOWFLAG
+	} else {
+		emu.eflags &= ^OVERFLOWFLAG
+	}
+}
+
+func isCarry(emu *Emulator) bool {
+	return (emu.eflags & CARRYFLAG) != 0
+}
+
+func isZero(emu *Emulator) bool {
+	return (emu.eflags & ZEROFLAG) != 0
+}
+func isSign(emu *Emulator) bool {
+	return (emu.eflags & SIGNFLAG) != 0
+}
+func isOverflow(emu *Emulator) bool {
+	return (emu.eflags & OVERFLOWFLAG) != 0
 }

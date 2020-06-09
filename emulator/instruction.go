@@ -60,6 +60,23 @@ func subRm32Imm8(emu *Emulator, modrm *ModRM) {
 	setRm32(emu, modrm, rm32-imm8)
 }
 
+func cmpR32Rm32(emu *Emulator) {
+	emu.Eip++
+	var modrm ModRM
+	parseModrm(emu, &modrm)
+	r32 := getR32(emu, &modrm)
+	rm32 := getRm32(emu, &modrm)
+	result := uint64(r32) + uint64(rm32)
+	updateEflagsSub(emu, r32, rm32, result)
+}
+
+func cmpRm32Imm8(emu *Emulator, modrm *ModRM) {
+	rm32 := getRm32(emu, modrm)
+	imm8 := int32(getSignCode8(emu, 0))
+	result := uint64(rm32) + uint64(imm8)
+	updateEflagsSub(emu, rm32, uint32(imm8), result)
+}
+
 func incRm32(emu *Emulator, modrm *ModRM) {
 	value := getRm32(emu, modrm)
 	setRm32(emu, modrm, value+1)
@@ -74,6 +91,8 @@ func code83(emu *Emulator) {
 		addRm32Imm8(emu, &modrm)
 	case 5:
 		subRm32Imm8(emu, &modrm)
+	case 7:
+		cmpRm32Imm8(emu, &modrm)
 	default:
 		fmt.Println("not implemented: 83", modrm.opecode)
 		os.Exit(1)
@@ -90,6 +109,90 @@ func codeff(emu *Emulator) {
 	default:
 		fmt.Println("not implemented: FF ", modrm.opecode)
 		os.Exit(1)
+	}
+}
+
+func jc(emu *Emulator) {
+	if isCarry(emu) {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+	} else {
+		emu.Eip += 2
+	}
+}
+
+func jnc(emu *Emulator) {
+	if isCarry(emu) {
+		emu.Eip += 2
+	} else {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+
+	}
+}
+
+func jz(emu *Emulator) {
+	if isZero(emu) {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+	} else {
+		emu.Eip += 2
+	}
+}
+
+func jnz(emu *Emulator) {
+	if isZero(emu) {
+		emu.Eip += 2
+	} else {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+
+	}
+}
+
+func js(emu *Emulator) {
+	if isSign(emu) {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+	} else {
+		emu.Eip += 2
+	}
+}
+
+func jns(emu *Emulator) {
+	if isSign(emu) {
+		emu.Eip += 2
+	} else {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+
+	}
+}
+
+func jo(emu *Emulator) {
+	if isOverflow(emu) {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+	} else {
+		emu.Eip += 2
+	}
+}
+
+func jno(emu *Emulator) {
+	if isOverflow(emu) {
+		emu.Eip += 2
+	} else {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+
+	}
+}
+
+func jl(emu *Emulator) {
+	if isSign(emu) != isOverflow(emu) {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+	} else {
+		emu.Eip += 2
+	}
+}
+
+func jle(emu *Emulator) {
+	if isZero(emu) || isSign(emu) != isOverflow(emu) {
+		emu.Eip += uint32(getSignCode8(emu, 1)) + 2
+	} else {
+		emu.Eip += 2
 	}
 }
 
@@ -112,7 +215,7 @@ func pushR32(emu *Emulator) {
 }
 
 func popR32(emu *Emulator) {
-	reg := GetCode8(emu, 0) - 0x50
+	reg := GetCode8(emu, 0) - 0x58
 	emu.Registers.setRegister32(reg, pop32(emu))
 	emu.Eip++
 }
@@ -148,6 +251,8 @@ func Instructions(index byte) (func(emu *Emulator), error) {
 	switch {
 	case 0x01 == index:
 		return addRm32R32, nil
+	case 0x3b == index:
+		return cmpR32Rm32, nil
 	case 0x50 <= index && index < 0x50+8:
 		return pushR32, nil
 	case 0x58 <= index && index < 0x58+8:
@@ -156,6 +261,28 @@ func Instructions(index byte) (func(emu *Emulator), error) {
 		return pushImm32, nil
 	case 0x6a == index:
 		return pushImm8, nil
+
+	case 0x70 == index:
+		return jo, nil
+	case 0x71 == index:
+		return jno, nil
+	case 0x72 == index:
+		return jc, nil
+	case 0x73 == index:
+		return jnc, nil
+	case 0x74 == index:
+		return jz, nil
+	case 0x75 == index:
+		return jnz, nil
+	case 0x78 == index:
+		return js, nil
+	case 0x79 == index:
+		return jns, nil
+	case 0x7c == index:
+		return jl, nil
+	case 0x7e == index:
+		return jle, nil
+
 	case 0x83 == index:
 		return code83, nil
 	case 0x89 == index:
