@@ -249,6 +249,20 @@ func shortJump(emu *Emulator) {
 	emu.Eip += uint32(diff + 2)
 }
 
+func inAlDx(emu *Emulator) {
+	address := emu.Registers.GetRegister32(EDX) & 0xffff
+	value := ioIn8(uint16(address))
+	emu.Registers.setRegister8(AL, value)
+	emu.Eip++
+}
+
+func outDxAl(emu *Emulator) {
+	address := emu.Registers.GetRegister32(EDX) & 0xffff
+	value := emu.Registers.getRegister8(AL)
+	ioOut8(uint16(address), value)
+	emu.Eip++
+}
+
 func Instructions(index byte) (func(emu *Emulator), error) {
 	switch {
 	case 0x01 == index:
@@ -305,6 +319,10 @@ func Instructions(index byte) (func(emu *Emulator), error) {
 		return nearJump, nil
 	case 0xeb == index:
 		return shortJump, nil
+	case 0xec == index:
+		return inAlDx, nil
+	case 0xee == index:
+		return outDxAl, nil
 	case 0xff == index:
 		return codeff, nil
 	}

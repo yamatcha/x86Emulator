@@ -5,6 +5,8 @@ type RegisterID int
 const (
 	RegistersCount        = 8
 	MemorySize            = 1024 * 1024
+	AL                    = 0
+	EDX                   = 2
 	ESP                   = 4
 	EBP                   = 5
 	CARRYFLAG      uint32 = 1
@@ -86,6 +88,24 @@ func (reg *Registers) GetRegister32(index byte) uint32 {
 		return reg.edi
 	}
 	return 0
+}
+
+func (reg *Registers) getRegister8(index byte) byte {
+	if index < 4 {
+		return byte(reg.GetRegister32(index) & 0xff)
+	} else {
+		return byte((reg.GetRegister32(index-4) >> 8) & 0xff)
+	}
+}
+
+func (reg *Registers) setRegister8(index byte, value byte) {
+	if index < 4 {
+		r := reg.GetRegister32(index) & 0xffffff00
+		reg.setRegister32(index, r|uint32(value))
+	} else {
+		r := reg.GetRegister32(index-4) & 0xffffff00
+		reg.setRegister32(index-4, r|uint32(value)<<8)
+	}
 }
 
 func GetCode8(emu *Emulator, index int) byte {
