@@ -6,6 +6,7 @@ const (
 	RegistersCount        = 8
 	MemorySize            = 1024 * 1024
 	AL                    = 0
+	EAX                   = 0
 	EDX                   = 2
 	ESP                   = 4
 	EBP                   = 5
@@ -128,13 +129,13 @@ func getSignCode32(emu *Emulator, index int) int32 {
 	return int32(getCode32(emu, index))
 }
 
-func setMomory8(emu *Emulator, address uint32, value uint32) {
+func setMemory8(emu *Emulator, address uint32, value uint32) {
 	emu.Memory[address] = byte(value & 0xff)
 }
 
 func setMemory32(emu *Emulator, address uint32, value uint32) {
 	for i := uint32(0); i < 4; i++ {
-		setMomory8(emu, address+i, value>>(i*8))
+		setMemory8(emu, address+i, value>>(i*8))
 	}
 }
 

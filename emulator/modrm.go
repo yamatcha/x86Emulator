@@ -97,3 +97,29 @@ func getR32(emu *Emulator, modrm *ModRM) uint32 {
 	return emu.Registers.GetRegister32(modrm.opecode)
 	// return emu.Registers.GetRegister32(modrm.regIndex)
 }
+
+func getRm8(emu *Emulator, modrm *ModRM) byte {
+	if modrm.mod == 3 {
+		return emu.Registers.getRegister8(modrm.rm)
+	} else {
+		address := calcMemoryAddress(emu, modrm)
+		return byte(getMemory8(emu, address))
+	}
+}
+
+func setRm8(emu *Emulator, modrm *ModRM, value byte) {
+	if modrm.mod == 3 {
+		emu.Registers.setRegister8(modrm.rm, value)
+	} else {
+		address := calcMemoryAddress(emu, modrm)
+		setMemory8(emu, address, uint32(value))
+	}
+}
+
+func getR8(emu *Emulator, modrm *ModRM) byte {
+	return emu.Registers.getRegister8(modrm.opecode)
+}
+
+func setR8(emu *Emulator, modrm *ModRM, value byte) {
+	emu.Registers.setRegister8(modrm.opecode, value)
+}

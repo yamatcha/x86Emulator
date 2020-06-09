@@ -37,6 +37,28 @@ func movR32Rm32(emu *Emulator) {
 	setR32(emu, &modrm, rm32)
 }
 
+func movRm8R8(emu *Emulator) {
+	emu.Eip++
+	var modrm ModRM
+	parseModrm(emu, &modrm)
+	r8 := getR8(emu, &modrm)
+	setRm8(emu, &modrm, r8)
+}
+
+func movR8Imm8(emu *Emulator) {
+	reg := GetCode8(emu, 0) - 0xb0
+	emu.Registers.setRegister8(reg, GetCode8(emu, 1))
+	emu.Eip += 2
+}
+
+func movR8Rm8(emu *Emulator) {
+	emu.Eip++
+	var modrm ModRM
+	parseModrm(emu, &modrm)
+	rm8 := getRm8(emu, &modrm)
+	setR8(emu, &modrm, byte(rm8))
+}
+
 func addRm32Imm8(emu *Emulator, modrm *ModRM) {
 	rm32 := getRm32(emu, modrm)
 	imm8 := int32(getSignCode8(emu, 0))
@@ -62,6 +84,22 @@ func subRm32Imm8(emu *Emulator, modrm *ModRM) {
 	updateEflagsSub(emu, rm32, imm8, result)
 }
 
+func cmpAlImm8(emu *Emulator) {
+	value := uint32(GetCode8(emu, 1))
+	al := uint32(emu.Registers.getRegister8(AL))
+	result := uint64(al) - uint64(value)
+	updateEflagsSub(emu, al, value, result)
+	emu.Eip += 2
+}
+
+func cmpEaxImm32(emu *Emulator) {
+	value := getCode32(emu, 1)
+	eax := emu.Registers.GetRegister32(EAX)
+	result := uint64(eax) - uint64(value)
+	updateEflagsSub(emu, eax, value, result)
+	emu.Eip++
+}
+
 func cmpR32Rm32(emu *Emulator) {
 	emu.Eip++
 	var modrm ModRM
@@ -82,6 +120,12 @@ func cmpRm32Imm8(emu *Emulator, modrm *ModRM) {
 func incRm32(emu *Emulator, modrm *ModRM) {
 	value := getRm32(emu, modrm)
 	setRm32(emu, modrm, value+1)
+}
+
+func incR32(emu *Emulator) {
+	reg := GetCode8(emu, 0) - 0x40
+	emu.Registers.setRegister32(reg, emu.Registers.GetRegister32(reg)+1)
+	emu.Eip++
 }
 
 func code83(emu *Emulator) {
@@ -269,6 +313,12 @@ func Instructions(index byte) (func(emu *Emulator), error) {
 		return addRm32R32, nil
 	case 0x3b == index:
 		return cmpR32Rm32, nil
+	case 0x3c == index:
+		return cmpAlImm8, nil
+	case 0x3d == index:
+		return cmpEaxImm32, nil
+	case 0x40 <= index && index < 0x40+8:
+		return incR32, nil
 	case 0x50 <= index && index < 0x50+8:
 		return pushR32, nil
 	case 0x58 <= index && index < 0x58+8:
@@ -301,10 +351,16 @@ func Instructions(index byte) (func(emu *Emulator), error) {
 
 	case 0x83 == index:
 		return code83, nil
+	case 0x88 == index:
+		return movRm8R8, nil
 	case 0x89 == index:
 		return movRm32R32, nil
+	case 0x8a == index:
+		return movR8Rm8, nil
 	case 0x8b == index:
 		return movR32Rm32, nil
+	case 0xb0 <= index && index < 0xb0+8:
+		return movR8Imm8, nil
 	case 0xb8 <= index && index < 0xb8+8:
 		return movR32Imm32, nil
 	case 0xc3 == index:
