@@ -6,6 +6,8 @@ const (
 	RegistersCount        = 8
 	MemorySize            = 1024 * 1024
 	AL                    = 0
+	BL                    = 3
+	AH                    = 4
 	EAX                   = 0
 	EDX                   = 2
 	ESP                   = 4
@@ -104,7 +106,7 @@ func (reg *Registers) setRegister8(index byte, value byte) {
 		r := reg.GetRegister32(index) & 0xffffff00
 		reg.setRegister32(index, r|uint32(value))
 	} else {
-		r := reg.GetRegister32(index-4) & 0xffffff00
+		r := reg.GetRegister32(index-4) & 0xffff00ff
 		reg.setRegister32(index-4, r|uint32(value)<<8)
 	}
 }

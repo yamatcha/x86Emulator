@@ -307,6 +307,17 @@ func outDxAl(emu *Emulator) {
 	emu.Eip++
 }
 
+func swi(emu *Emulator) {
+	intIndex := GetCode8(emu, 1)
+	emu.Eip += 2
+	switch intIndex {
+	case 0x10:
+		biosVideo(emu)
+	default:
+		fmt.Printf("unknown interrupt: 0x%02x\n", intIndex)
+	}
+}
+
 func Instructions(index byte) (func(emu *Emulator), error) {
 	switch {
 	case 0x01 == index:
@@ -369,6 +380,10 @@ func Instructions(index byte) (func(emu *Emulator), error) {
 		return movRm32Imm32, nil
 	case 0xc9 == index:
 		return leave, nil
+
+	case 0xcd == index:
+		return swi, nil
+
 	case 0xe8 == index:
 		return callRel32, nil
 	case 0xe9 == index:
